@@ -1,0 +1,110 @@
+
+Serine_CY_123
+		<- Serine_Media_123
+		<- Glucose_Media_123
+		<- Serine_MT_123
+		<- Glycine_CY_1 + Ch2THF_CY_12
+
+Serine_MT_123
+		<- Serine_CY_123
+		<- Glycine_MT_1 + Ch2THF_MT_12
+
+Glycine_MT_1
+		<- Serine_MT_1
+		<- Glycine_CY_1
+
+Glycine_CY_1
+		<- Serine_CY_1
+		<- Glycine_MT_1
+		<- Glycine_Media_1
+
+TTP_CY_12
+		<- Ch2THF_CY_12
+
+Ch2THF_CY_12
+		<- Serine_CY_23
+		<- OTHER_1B_Media_1 + FormylTHF_CY_1
+		<- FormylTHF_CY_1 + OTHER_1B_Media_1
+
+Ch2THF_MT_12
+		<- Serine_MT_23
+		<- OTHER_1A_1 + FormylTHF_MT_1
+		<- FormylTHF_MT_1 + OTHER_1A_1
+
+Serine_MT_1
+		<- Serine_CY_1
+		<- Glycine_MT_1
+
+Serine_CY_1
+		<- Serine_Media_1
+		<- Glucose_Media_1
+		<- Serine_MT_1
+		<- Glycine_CY_1
+
+Serine_CY_23
+		<- Serine_Media_23
+		<- Glucose_Media_23
+		<- Serine_MT_23
+		<- Ch2THF_CY_12
+
+FormylTHF_CY_1
+		<- Ch2THF_CY_2
+		<- Ch2THF_CY_1
+		<- Formate_CY_1
+
+Serine_MT_23
+		<- Serine_CY_23
+		<- Ch2THF_MT_12
+
+FormylTHF_MT_1
+		<- Ch2THF_MT_2
+		<- Ch2THF_MT_1
+		<- Formate_MT_1
+
+Ch2THF_CY_2
+		<- Serine_CY_3
+		<- FormylTHF_CY_1
+		<- OTHER_1B_Media_1
+
+Ch2THF_CY_1
+		<- Serine_CY_2
+		<- OTHER_1B_Media_1
+		<- FormylTHF_CY_1
+
+Formate_CY_1
+		<- FormylTHF_CY_1
+		<- Formate_MT_1
+
+Ch2THF_MT_2
+		<- Serine_MT_3
+		<- FormylTHF_MT_1
+		<- OTHER_1A_1
+
+Ch2THF_MT_1
+		<- Serine_MT_2
+		<- OTHER_1A_1
+		<- FormylTHF_MT_1
+
+Formate_MT_1
+		<- Formate_CY_1
+		<- FormylTHF_MT_1
+
+Serine_CY_3
+		<- Serine_Media_3
+		<- Glucose_Media_3
+		<- Serine_MT_3
+		<- Ch2THF_CY_2
+
+Serine_CY_2
+		<- Serine_Media_2
+		<- Glucose_Media_2
+		<- Serine_MT_2
+		<- Ch2THF_CY_1
+
+Serine_MT_3
+		<- Serine_CY_3
+		<- Ch2THF_MT_2
+
+Serine_MT_2
+		<- Serine_CY_2
+		<- Ch2THF_MT_1
