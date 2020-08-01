@@ -20,6 +20,10 @@ addpath(genpath('./cobratoolbox'))
 
 % load metabolic model
 LoadModel
+% number of triels to find global minimum
+NUMBER_OF_RANDOM_INITIAL_VALUES = 10000;
+% chi square distribution  - one degree of freedom
+CONSTANT_VALUE_FOR_CONFIDENCE_INTERVAL = 3.84;
 
 % load measured isotope labeling
 run processIsotopicLabel/calc;
@@ -208,40 +212,23 @@ fprintf('Analyze EMU\n');
 EMU = AnalyzeEMU(model, EMU_list, EMU_met, EMU_reactions);
 
 
-% extra_met_isotopomers{1}.atom_idv = [1;1;1];    %Serine_Media
-% extra_met_isotopomers{1}.enrichment = 1; 
-% extra_met_isotopomers{3}.atom_idv = [0;0;0];    %Glucose
-% extra_met_isotopomers{3}.enrichment = 1; 
-% extra_met_isotopomers{11}.atom_idv = [0];       %Glycine_Media
-% extra_met_isotopomers{11}.enrichment = 1; 
-% extra_met_isotopomers{14}.atom_idv = [0];       %Other_1B media
-% extra_met_isotopomers{14}.enrichment = 1; 
-% % added for the left biderrwectional flux
-% extra_met_isotopomers{7}.atom_idv = [0];        %Other_1A media
-% extra_met_isotopomers{7}.enrichment = 1; 
-
 extra_met_isotopomers = cell(model.met_num,1);
 for(i=1:model.met_num)
     extra_met_isotopomers{i}  = model.met_extra_labeling{i};
 end
 
-
-
 idv = CreateIDV(EMU, extra_met_isotopomers);
-
- 
-
 
 min_error=inf;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% run optimization 100 times to find global minima
+% run optimization NUMBER_OF_RANDOM_INITIAL_VALUES times to find global minima
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 error_matrix=[];
 exitflag_matrix=[];
 predicted_flux_matrix=[];
 predicted_cy_ratio_matrix=[];
-parfor(j=1:100)
+parfor(j=1:NUMBER_OF_RANDOM_INITIAL_VALUES)
     initial_fluxes = rand(length(model.rxns),1).*(model.ub-model.lb)+model.lb;  % Initial flux vector for non-convex optimization
     initial_cy_mt_ratio = rand(number_of_measured_wc_idv,1);
     
@@ -256,8 +243,22 @@ end
 [min_error min_error_index]= min(error_matrix);
 best_predicted_flux     = predicted_flux_matrix(:,min_error_index);
 best_predicted_cy_ratio = predicted_cy_ratio_matrix(:,min_error_index);
+
+% print simulated vs measured MID
+% [exitflag error predicted_flux predicted_cy_mt_ratio idv_opt]= ComputeEMUOptFlux(model, EMU, idv, EMU_met_known_mat, met_list_norm, WC_known_metabolites, best_predicted_flux, best_predicted_cy_ratio);
+idv_known_arr = EMU_met_known_mat(:);
+[idv_opt idv_d cycle_error] = ComputeEmuIDV(EMU, idv, idv_known_arr, best_predicted_flux);
+OutputSimulatedVsMeasured(idv, EMU, EMU_met_known_mat, idv_opt, best_predicted_flux,best_predicted_cy_ratio,  model, WC_known_metabolites)
+
 initial_fluxes = best_predicted_flux;
 initial_cy_mt_ratio = best_predicted_cy_ratio;
+
+% get all predicted within confidence interval
+indices_within_confidence_interval = find(error_matrix<min_error+CONSTANT_VALUE_FOR_CONFIDENCE_INTERVAL);
+all_predicted_fluxes_within_confidence_interval     = predicted_flux_matrix(:,indices_within_confidence_interval);
+all_predicted_cy_ratios_within_confidence_interval  = predicted_cy_ratio_matrix(:,indices_within_confidence_interval);
+
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % sensitivity analysis on all fluxes
@@ -269,13 +270,17 @@ predicted_cy_mt_ratio_array=[];
 model.equality_constraints = [model.equality_constraints;zeros(1,size(model.equality_constraints,2))];
 [equality_constraints_row equality_constraints_column] = size(model.equality_constraints);
 
-ratio_array = [0.01 0.05 0.1 0.2 0.3 0.4 0.7 1 2 4 7 11 16 22 27 35 45 55 65 75 85 100 120 140 170 200 250 300 400 500 700 1000 1500 2000];
-% chi square distribution  - one degree of freedom
-CONSTANT_VALUE_FOR_CONFIDENCE_INTERVAL = 3.84;
+ratio_array = [0.01 0.05 0.1 0.2 0.3 0.4 0.7 1 2 4 7 11 16 22 30 40 50 70 100 150 200 300 500 700 1000 1500 2000];
 
-parfor i=1:length(ratio_array)
-    net_flux_ratio = ratio_array(i);
+
+parfor i=0:(length(ratio_array)*length(indices_within_confidence_interval))-1
+    index_ratio_array = 1+mod(i,length(ratio_array));
+    index_random_within_confidence_interval = 1+floor(i/length(ratio_array));
+    net_flux_ratio = ratio_array(index_ratio_array);
     current_model = model;
+    
+    initial_fluxes = all_predicted_fluxes_within_confidence_interval(:,index_random_within_confidence_interval);
+    initial_cy_mt_ratio = all_predicted_cy_ratios_within_confidence_interval(:,index_random_within_confidence_interval);
     % Sensitivity analysis for SHMT1/SHMT2
     current_model.equality_constraints(end,12)=1;
     current_model.equality_constraints(end,13)=-1;
@@ -284,24 +289,35 @@ parfor i=1:length(ratio_array)
 %     current_model.equality_constraints(end,27)=net_flux_ratio;
     [exitflag error predicted_flux predicted_cy_mt_ratio idv_opt]= ComputeEMUOptFlux(current_model, EMU, idv, EMU_met_known_mat, met_list_norm, WC_known_metabolites, initial_fluxes, initial_cy_mt_ratio);
 
-    fprintf('\n\t*****************  %f   \t****************\n', net_flux_ratio);    
+    fprintf('\n\t*****************  i=%d; index ratio array=%d; index random=%d; net flux ratio=%f   \t****************\n', i+1, index_ratio_array, index_random_within_confidence_interval, net_flux_ratio);    
 
-    error_array(i)=error;
-    exitflag_array(i)=exitflag;
-    predicted_fluxes_array(:,i)=predicted_flux;
-    predicted_cy_mt_ratio_array(:,i)=predicted_cy_mt_ratio;
+    error_array(i+1)=error;
+    exitflag_array(i+1)=exitflag;
+    predicted_fluxes_array(i+1,:)=predicted_flux;
+    predicted_cy_mt_ratio_array(i+1,:)=predicted_cy_mt_ratio;
+
 end
-LF_left_right_BD.predicted_fluxes_array=predicted_fluxes_array;
-LF_left_right_BD.predicted_cy_mt_ratio_array=predicted_cy_mt_ratio_array;
-LF_left_right_BD.error_array=error_array;
-LF_left_right_BD.exitflag_array=exitflag_array;
-LF_left_right_BD.minimum_error=min_error;
 
+% each column contains all ratio of sensitivity analysis results of a specific
+% random trial that was within cinfidence interval
+error_array_of_guesses_within_confidence_interval                       = reshape(error_array, length(ratio_array), length(indices_within_confidence_interval));
+exitflag_array_of_guesses_within_confidence_interval                    = reshape(exitflag_array, length(ratio_array), length(indices_within_confidence_interval));
+% if exit flag is invalid (optimization failed) put Inf in the error of the
+% optimization
+error_array_of_guesses_within_confidence_interval(exitflag_array_of_guesses_within_confidence_interval~=2)=inf;
+% predicted gluxes and cy/mt ratios of each random trial and each
+% sensitivity analysis value
+predicted_fluxes_array_of_guesses_within_confidence            = reshape(predicted_fluxes_array, length(ratio_array), length(indices_within_confidence_interval),size(predicted_fluxes_array,2));
+predicted_cy_mt_ratio_array_of_guesses_within_confidence       = reshape(predicted_cy_mt_ratio_array, length(ratio_array), length(indices_within_confidence_interval),size(predicted_cy_mt_ratio_array,2));
+
+% take the best error among all random trials for each sensitivity analysis
+% value
+min_error_array_of_guesses_within_confidence_interval = min(error_array_of_guesses_within_confidence_interval,[],2);
 figure;
 x=ratio_array;
-error_array_within_confidence_intervals = error_array;
+error_array_within_confidence_intervals = min_error_array_of_guesses_within_confidence_interval;
 error_array_within_confidence_intervals(error_array_within_confidence_intervals>(min(error_array_within_confidence_intervals)+CONSTANT_VALUE_FOR_CONFIDENCE_INTERVAL))=inf;
-plot(x(exitflag_array~=-2),error_array(exitflag_array~=-2));
+plot(x,min_error_array_of_guesses_within_confidence_interval);
 set(gca, 'Ylim', [0 100]);
 xlabel('SHMT1/SHMT2','FontSize',30);
 ylabel('Score','FontSize',30);
@@ -313,8 +329,6 @@ set(gca, 'Xlim', [0 35]);
 result_ratios_within_confience_intervals = ratio_array(error_array_within_confidence_intervals<(min(error_array)+CONSTANT_VALUE_FOR_CONFIDENCE_INTERVAL));
 result_ratio_best_fit = (best_predicted_flux(12)-best_predicted_flux(13))/((best_predicted_flux(6)-best_predicted_flux(7)));
 result_ratio_confidece_intervals = [min(result_ratios_within_confience_intervals) max(result_ratios_within_confience_intervals)]
-
-
 
 
 

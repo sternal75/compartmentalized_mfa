@@ -21,7 +21,7 @@ function [ output_args ] = bar_label( D, L )
             end
                 
         end
-    text(xt(k1)*ones(1,size(D,2)), joblblpos(k1,:), yjob, 'HorizontalAlignment','center', 'Color','w', 'FontSize', 6)
+    text(xt(k1)*ones(1,size(D,2)), joblblpos(k1,:), yjob, 'HorizontalAlignment','center', 'Color','w', 'FontSize', 22)
     end
 end
 

@@ -121,14 +121,14 @@ for i=1:size(g_idv_known_mat,1)
     try
     e = e + sum(((g_WC_known_metabolites{i}.idv(2:end)-((iterator_cy_mt_ratio*idv_cy(2:end))+((1-iterator_cy_mt_ratio)*idv_mt(2:end))) ).^2)./g_WC_known_metabolites{i}.idv_variance(2:end));
     catch
-        alon=1;
+        sprintf('error on ComputeError');
     end
 end
-e1=e;
+% e1=e;
 % HF - updated from Won
-e = e + (((flux(1)-flux(2))-7.74)/0.016)^2;
-e = e + (((flux(16)-flux(17))-0.08)/0.02)^2;
-e = e + ((flux(27)-1.24)/0.03)^2;
+% e = e + (((flux(1)-flux(2))-7.74)/0.016)^2;
+% e = e + (((flux(16)-flux(17))-0.08)/0.02)^2;
+% e = e + ((flux(27)-1.24)/0.03)^2;
 
 % % LF - updated from Won
 % e = e + (((flux(1)-flux(2))-1.68)/0.03)^2;
@@ -139,65 +139,12 @@ e = e + ((flux(27)-1.24)/0.03)^2;
 for(i=1:size(model.measured_net_fluxes_matrix,1))
     % for forward backward fluxes
     if(model.measured_net_fluxes_matrix(i,2)~=0)
-        e1 = e1 + (((flux(model.measured_net_fluxes_matrix(i,1))-flux(model.measured_net_fluxes_matrix(i,2)))-model.measured_net_fluxes_matrix(i,3))/model.measured_net_fluxes_matrix(i,4))^2;
+        e = e + (((flux(model.measured_net_fluxes_matrix(i,1))-flux(model.measured_net_fluxes_matrix(i,2)))-model.measured_net_fluxes_matrix(i,3))/model.measured_net_fluxes_matrix(i,4))^2;
     else
-        e1 = e1 + (((flux(model.measured_net_fluxes_matrix(i,1)))-model.measured_net_fluxes_matrix(i,3))/model.measured_net_fluxes_matrix(i,4))^2;
+        e = e + (((flux(model.measured_net_fluxes_matrix(i,1)))-model.measured_net_fluxes_matrix(i,3))/model.measured_net_fluxes_matrix(i,4))^2;
     end
 end
     
-% function d = ComputeErrorDeriv(g_WC_known_metabolites, idv, idv_d, g_idv_known_arr, g_idv_known_mat, g_EMU, cy_mt_ratio, flux)
-% rxn_num = length(flux);
-% d1 = 0;
-% d2 = [];
-% for i=1:size(g_idv_known_mat,1)    
-%     x_cy = g_idv_known_mat(i,1);
-%     x_mt = g_idv_known_mat(i,2);
-% 
-%     EMU_indices_cy = find(g_EMU.list(:,1)==x_cy);
-%     EMU_indices_mt = find(g_EMU.list(:,1)==x_mt);
-%     if(isempty(EMU_indices_cy))
-%         idv_cy = zeros(size(idv{EMU_indices_mt(1)}));
-%         idv_cy_d = zeros(rxn_num,size(idv{EMU_indices_mt(1)},2));
-%         iterator_cy_mt_ratio = 0;
-%     else
-%         idv_cy = idv{EMU_indices_cy(1)};
-%         idv_cy_d = idv_d{EMU_indices_cy(1)};
-%     end
-%     if(isempty(EMU_indices_mt))
-%         idv_mt = zeros(size(idv{EMU_indices_cy(1)}));
-%         idv_mt_d = zeros(rxn_num,size(idv{EMU_indices_cy(1)},2));
-%         iterator_cy_mt_ratio = 1;
-%     else
-%         idv_mt = idv{EMU_indices_mt(1)};
-%         idv_mt_d = idv_d{EMU_indices_mt(1)};
-%     end    
-%     
-%     if(((~isnan(x_cy)) && (~isnan(x_mt))))
-%        iterator_cy_mt_ratio = cy_mt_ratio(i);
-%     end    
-%     
-%     % compare known idv to the first EMU idv of this metabolite
-%     % it must be the first one from all EMU of the same metabolite, as the
-%     % first one contains all the carbons
-%     g_WC_known_metabolites{i}.idv_variance(g_WC_known_metabolites{i}.idv_variance<0.0001)=0.0001;
-% 
-%     
-%     % compare known idv to the first EMU idv of this metabolite
-%     % it must be the first one from all EMU of the same metabolite, as the
-%     % first one contains all the carbons        
-%     d1 = d1 + 2*sum( repmat((((iterator_cy_mt_ratio*idv_cy(2:end))+((1-iterator_cy_mt_ratio)*idv_mt(2:end)))-g_WC_known_metabolites{i}.idv(2:end))./g_WC_known_metabolites{i}.idv_variance(2:end), rxn_num,1).*((iterator_cy_mt_ratio*idv_cy_d(:,2:end))+((1-iterator_cy_mt_ratio)*idv_mt_d(:,2:end))),2 );
-%     if(((~isnan(x_cy)) && (~isnan(x_mt))))
-%         d2 = [d2;2*sum((((((iterator_cy_mt_ratio*idv_cy(2:end))+((1-iterator_cy_mt_ratio)*idv_mt(2:end)))-g_WC_known_metabolites{i}.idv(2:end))./g_WC_known_metabolites{i}.idv_variance(2:end))).*((idv_cy(:,2:end))-(idv_mt(:,2:end))),2)];
-%     end
-% end
-% d1(1)=d1(1)+2*(((flux(1)-flux(2))-3.11)/0.16)*(1/0.16);
-% d1(2)=d1(2)+2*(((flux(1)-flux(2))-3.11)/0.16)*(-1/0.16);
-% d1(16)=d1(16)+2*(((flux(16)-flux(17))-0)/0.09)*(1/0.09);
-% d1(17)=d1(17)+2*(((flux(16)-flux(17))-0)/0.09)*(-1/0.09);
-% d1(27)=d1(27)+2*((flux(27)-1.24)/0.03)*(1/0.03);
-% d = [d1;d2];
-
-
 
 function [c1 c2] = con_func(x)
     if (abs(x(1)) < 1e-2)
