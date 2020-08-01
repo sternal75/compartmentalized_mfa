@@ -5,3 +5,4 @@
 % print results
 fprintf('best fit ratio(LF)=%f  confidence intervals(LF)=[%f %f]\n', result_ratio_best_fit_LF, result_ratio_confidece_intervals_LF(1), result_ratio_confidece_intervals_LF(2));
 fprintf('best fit ratio(HF)=%f  confidence intervals(HF)=[%f %f]\n', result_ratio_best_fit_HF, result_ratio_confidece_intervals_HF(1), result_ratio_confidece_intervals_HF(2));
+stop=1
